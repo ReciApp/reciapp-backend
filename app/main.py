@@ -5,12 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import FRONTEND_URL
 from app.db.session import engine
 from app.models.base import Base
-from app.api.v1 import auth, users
+import app.models  # noqa: F401 — registra todos los modelos en Base.metadata
+from app.api.v1 import auth, users, solicitudes
 
 app = FastAPI(
-    title="ReciApp API — Entregable 1",
-    description="Autenticación y gestión de usuarios",
-    version="1.0.0",
+    title="ReciApp API",
+    description="Autenticación, gestión de usuarios y solicitudes de recolección",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -23,6 +24,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(users.router, prefix="/api/usuarios", tags=["Usuarios"])
+app.include_router(solicitudes.router, prefix="/api/solicitudes", tags=["Solicitudes"])
 
 
 @app.on_event("startup")
