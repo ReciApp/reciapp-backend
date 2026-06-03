@@ -7,7 +7,8 @@ from app.core.config import FRONTEND_URL
 from app.db.session import engine
 from app.models.base import Base
 import app.models  # noqa: F401 — registra todos los modelos en Base.metadata
-from app.api.v1 import auth, users, solicitudes, evidencias
+from app.api.v1 import auth, users, solicitudes, evidencias, ws
+from app.websockets.manager import manager
 
 app = FastAPI(
     title="ReciApp API",
@@ -27,10 +28,12 @@ app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(users.router, prefix="/api/usuarios", tags=["Usuarios"])
 app.include_router(solicitudes.router, prefix="/api/solicitudes", tags=["Solicitudes"])
 app.include_router(evidencias.router, prefix="/api/evidencias", tags=["Evidencias"])
+app.include_router(ws.router, tags=["WebSocket"])
 
 
 @app.on_event("startup")
 async def startup():
+    manager.set_loop(asyncio.get_event_loop())
     max_retries = 20
     for attempt in range(max_retries):
         try:
