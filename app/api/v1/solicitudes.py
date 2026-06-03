@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.models.user import Usuario
 from app.schemas.solicitud import SolicitudCreate, SolicitudOut
 from app.services.asignacion import trigger_asignacion
+from app.websockets.manager import manager
 
 router = APIRouter()
 
@@ -64,3 +65,74 @@ def obtener_solicitud(
         return solicitud
 
     raise HTTPException(status_code=403, detail="No tienes acceso a esta solicitud")
+
+
+@router.put(
+    "/{solicitud_id}/aceptar",
+    response_model=SolicitudOut,
+    summary="Reciclador acepta la solicitud asignada",
+)
+def aceptar_solicitud(
+    solicitud_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role("reciclador")),
+):
+    solicitud = crud_solicitud.get_by_id(db, solicitud_id)
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    if solicitud.reciclador_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No eres el reciclador asignado a esta solicitud")
+    if solicitud.estado != "asignada":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"La solicitud está en estado '{solicitud.estado}', no puede aceptarse",
+        )
+
+    solicitud = crud_solicitud.marcar_estado(db, solicitud, "en_camino")
+
+    manager.notify_from_thread(
+        solicitud.ciudadano_id,
+        {
+            "tipo": "solicitud_en_camino",
+            "solicitud_id": solicitud.id,
+            "reciclador_id": solicitud.reciclador_id,
+        },
+    )
+    return solicitud
+
+
+@router.put(
+    "/{solicitud_id}/rechazar",
+    response_model=SolicitudOut,
+    summary="Reciclador rechaza la solicitud; se dispara reasignación automática",
+)
+def rechazar_solicitud(
+    solicitud_id: int,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role("reciclador")),
+):
+    solicitud = crud_solicitud.get_by_id(db, solicitud_id)
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    if solicitud.reciclador_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No eres el reciclador asignado a esta solicitud")
+    if solicitud.estado != "asignada":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"La solicitud está en estado '{solicitud.estado}', no puede rechazarse",
+        )
+
+    reciclador_rechazado_id = current_user.id
+    solicitud = crud_solicitud.resetear_asignacion(db, solicitud)
+
+    manager.notify_from_thread(
+        solicitud.ciudadano_id,
+        {
+            "tipo": "solicitud_reasignando",
+            "solicitud_id": solicitud.id,
+        },
+    )
+
+    background_tasks.add_task(trigger_asignacion, solicitud_id, 1, {reciclador_rechazado_id})
+    return solicitud
