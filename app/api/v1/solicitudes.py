@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.dependencies import get_current_user, require_role
@@ -23,3 +23,41 @@ def crear_solicitud(
 ):
     solicitud = crud_solicitud.create(db, data, current_user.id)
     return solicitud
+
+
+@router.get(
+    "",
+    response_model=list[SolicitudOut],
+    summary="Listar mis solicitudes",
+)
+def listar_solicitudes(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    if current_user.rol == "reciclador":
+        return crud_solicitud.get_by_reciclador(db, current_user.id)
+    return crud_solicitud.get_by_ciudadano(db, current_user.id)
+
+
+@router.get(
+    "/{solicitud_id}",
+    response_model=SolicitudOut,
+    summary="Obtener detalle de una solicitud",
+)
+def obtener_solicitud(
+    solicitud_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    solicitud = crud_solicitud.get_by_id(db, solicitud_id)
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+
+    if current_user.rol == "admin":
+        return solicitud
+    if current_user.rol == "ciudadano" and solicitud.ciudadano_id == current_user.id:
+        return solicitud
+    if current_user.rol == "reciclador" and solicitud.reciclador_id == current_user.id:
+        return solicitud
+
+    raise HTTPException(status_code=403, detail="No tienes acceso a esta solicitud")
