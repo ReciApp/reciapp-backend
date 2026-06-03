@@ -34,3 +34,12 @@ def get_by_ciudadano(db: Session, ciudadano_id: int) -> list[Solicitud]:
         .order_by(Solicitud.fecha_creacion.desc())
         .all()
     )
+
+
+def get_by_reciclador(db: Session, reciclador_id: int) -> list[Solicitud]:
+    return (
+        db.query(Solicitud)
+        .filter(Solicitud.reciclador_id == reciclador_id)
+        .order_by(Solicitud.fecha_creacion.desc())
+        .all()
+    )
