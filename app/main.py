@@ -1,12 +1,13 @@
 import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import FRONTEND_URL
 from app.db.session import engine
 from app.models.base import Base
 import app.models  # noqa: F401 — registra todos los modelos en Base.metadata
-from app.api.v1 import auth, users, solicitudes
+from app.api.v1 import auth, users, solicitudes, evidencias
 
 app = FastAPI(
     title="ReciApp API",
@@ -25,6 +26,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(users.router, prefix="/api/usuarios", tags=["Usuarios"])
 app.include_router(solicitudes.router, prefix="/api/solicitudes", tags=["Solicitudes"])
+app.include_router(evidencias.router, prefix="/api/evidencias", tags=["Evidencias"])
 
 
 @app.on_event("startup")
@@ -41,6 +43,11 @@ async def startup():
                 await asyncio.sleep(2)
             else:
                 raise
+
+
+import os as _os
+_os.makedirs("uploads/evidencias", exist_ok=True)
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 @app.get("/healthcheck", tags=["Sistema"])
