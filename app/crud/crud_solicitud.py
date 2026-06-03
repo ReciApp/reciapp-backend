@@ -69,3 +69,13 @@ def marcar_estado(db: Session, solicitud: Solicitud, nuevo_estado: str) -> Solic
     db.commit()
     db.refresh(solicitud)
     return solicitud
+
+
+def resetear_asignacion(db: Session, solicitud: Solicitud) -> Solicitud:
+    """Limpia reciclador y vuelve a 'pendiente' (rechazar o timeout)."""
+    solicitud.estado = "pendiente"
+    solicitud.reciclador_id = None
+    solicitud.fecha_asignacion = None
+    db.commit()
+    db.refresh(solicitud)
+    return solicitud
