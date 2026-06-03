@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.dependencies import get_current_user, require_role
@@ -6,6 +6,7 @@ from app.crud import crud_solicitud
 from app.db.session import get_db
 from app.models.user import Usuario
 from app.schemas.solicitud import SolicitudCreate, SolicitudOut
+from app.services.asignacion import trigger_asignacion
 
 router = APIRouter()
 
@@ -18,10 +19,12 @@ router = APIRouter()
 )
 def crear_solicitud(
     data: SolicitudCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role("ciudadano")),
 ):
     solicitud = crud_solicitud.create(db, data, current_user.id)
+    background_tasks.add_task(trigger_asignacion, solicitud.id)
     return solicitud
 
 
