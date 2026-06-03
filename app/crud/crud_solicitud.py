@@ -43,3 +43,11 @@ def get_by_reciclador(db: Session, reciclador_id: int) -> list[Solicitud]:
         .order_by(Solicitud.fecha_creacion.desc())
         .all()
     )
+
+
+def asignar(db: Session, solicitud: Solicitud, reciclador_id: int) -> Solicitud:
+    solicitud.reciclador_id = reciclador_id
+    solicitud.estado = "asignada"
+    db.commit()
+    db.refresh(solicitud)
+    return solicitud

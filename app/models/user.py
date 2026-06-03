@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String
 from sqlalchemy.sql import func
 from app.models.base import Base
 
@@ -22,3 +22,5 @@ class Usuario(Base):
     disponibilidad_horaria = Column(String(200), nullable=True)
     # pendiente | aprobado | rechazado — solo aplica al rol reciclador
     estado_validacion = Column(String(20), nullable=True)
+    latitud = Column(Float, nullable=True)
+    longitud = Column(Float, nullable=True)
