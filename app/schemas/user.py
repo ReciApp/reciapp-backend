@@ -58,6 +58,8 @@ class UsuarioUpdate(BaseModel):
     celular: str | None = None
     zona_cobertura: str | None = None
     disponibilidad_horaria: str | None = None
+    latitud: float | None = None
+    longitud: float | None = None
 
 
 class ValidarReciclador(BaseModel):
@@ -77,6 +79,8 @@ class UsuarioOut(BaseModel):
     zona_cobertura: str | None = None
     disponibilidad_horaria: str | None = None
     estado_validacion: str | None = None
+    latitud: float | None = None
+    longitud: float | None = None
 
 
 class TokenOut(BaseModel):
