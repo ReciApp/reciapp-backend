@@ -73,5 +73,6 @@ class SolicitudOut(BaseModel):
     longitud: float | None
     estado: str
     reciclador_id: int | None
+    fecha_asignacion: datetime | None
     fecha_creacion: datetime | None
     fecha_actualizacion: datetime | None

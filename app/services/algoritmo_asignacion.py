@@ -17,7 +17,11 @@ def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def _recicladores_disponibles(db: Session, franja_horaria: str) -> list[Usuario]:
+def _recicladores_disponibles(
+    db: Session,
+    franja_horaria: str,
+    excluir_ids: set[int] | None = None,
+) -> list[Usuario]:
     candidatos = (
         db.query(Usuario)
         .filter(
@@ -27,6 +31,8 @@ def _recicladores_disponibles(db: Session, franja_horaria: str) -> list[Usuario]
         )
         .all()
     )
+    if excluir_ids:
+        candidatos = [r for r in candidatos if r.id not in excluir_ids]
     # Priorizar los que tienen la franja horaria coincidente
     con_franja = [
         r for r in candidatos
@@ -52,12 +58,19 @@ def _reciclador_mas_cercano(candidatos: list[Usuario], solicitud: Solicitud) -> 
     )
 
 
-def asignar_solicitud(db: Session, solicitud: Solicitud) -> bool:
+def asignar_solicitud(
+    db: Session,
+    solicitud: Solicitud,
+    excluir_ids: set[int] | None = None,
+) -> bool:
     """Busca el reciclador más cercano disponible y asigna la solicitud.
+
+    Args:
+        excluir_ids: IDs de recicladores a excluir (rechazaron previamente).
 
     Returns True si se asignó, False si no hay reciclador disponible.
     """
-    candidatos = _recicladores_disponibles(db, solicitud.franja_horaria)
+    candidatos = _recicladores_disponibles(db, solicitud.franja_horaria, excluir_ids)
     reciclador = _reciclador_mas_cercano(candidatos, solicitud)
 
     if not reciclador:
