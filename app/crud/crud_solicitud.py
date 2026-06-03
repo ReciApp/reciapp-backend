@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 from app.models.solicitud import Solicitud
 from app.schemas.solicitud import SolicitudCreate
@@ -48,6 +49,23 @@ def get_by_reciclador(db: Session, reciclador_id: int) -> list[Solicitud]:
 def asignar(db: Session, solicitud: Solicitud, reciclador_id: int) -> Solicitud:
     solicitud.reciclador_id = reciclador_id
     solicitud.estado = "asignada"
+    solicitud.fecha_asignacion = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(solicitud)
+    return solicitud
+
+
+def reasignar(db: Session, solicitud: Solicitud, nuevo_reciclador_id: int) -> Solicitud:
+    """Cambia el reciclador asignado sin modificar el estado (sigue 'asignada')."""
+    solicitud.reciclador_id = nuevo_reciclador_id
+    solicitud.fecha_asignacion = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(solicitud)
+    return solicitud
+
+
+def marcar_estado(db: Session, solicitud: Solicitud, nuevo_estado: str) -> Solicitud:
+    solicitud.estado = nuevo_estado
     db.commit()
     db.refresh(solicitud)
     return solicitud
