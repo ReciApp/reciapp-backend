@@ -4,7 +4,7 @@ from app.api.v1.dependencies import get_current_user, require_role
 from app.crud import crud_user
 from app.db.session import get_db
 from app.models.user import Usuario
-from app.schemas.user import UsuarioOut, UsuarioUpdate, ValidarReciclador
+from app.schemas.user import UsuarioOut, UsuarioPublico, UsuarioUpdate, ValidarReciclador
 
 router = APIRouter()
 
@@ -21,6 +21,22 @@ def actualizar_perfil(
     db: Session = Depends(get_db),
 ):
     return crud_user.update_perfil(db, current_user, data)
+
+
+@router.get(
+    "/{usuario_id}",
+    response_model=UsuarioPublico,
+    summary="Datos públicos de un usuario (nombre, celular, zona)",
+)
+def obtener_usuario_publico(
+    usuario_id: int,
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(get_current_user),
+):
+    usuario = crud_user.get_by_id(db, usuario_id)
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return usuario
 
 
 # ── Endpoints exclusivos del admin ─────────────────────────────────────────────
