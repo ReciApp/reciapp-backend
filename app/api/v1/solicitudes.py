@@ -2,7 +2,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.v1.dependencies import get_current_user, require_role
-from app.crud import crud_solicitud
+from app.crud import crud_evidencia, crud_solicitud, crud_user
 from app.db.session import get_db
 from app.models.user import Usuario
 from app.schemas.solicitud import SolicitudCreate, SolicitudOut
@@ -135,4 +135,54 @@ def rechazar_solicitud(
     )
 
     background_tasks.add_task(trigger_asignacion, solicitud_id, 1, {reciclador_rechazado_id})
+    return solicitud
+
+
+@router.put(
+    "/{solicitud_id}/confirmar",
+    response_model=SolicitudOut,
+    summary="Ciudadano confirma la recolección — acredita eco-créditos y marca completada",
+)
+def confirmar_recoleccion(
+    solicitud_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role("ciudadano")),
+):
+    solicitud = crud_solicitud.get_by_id(db, solicitud_id)
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    if solicitud.ciudadano_id != current_user.id:
+        raise HTTPException(status_code=403, detail="No eres el ciudadano de esta solicitud")
+    if solicitud.estado != "pendiente_confirmacion":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"La solicitud está en estado '{solicitud.estado}', no puede confirmarse",
+        )
+
+    evidencias = crud_evidencia.get_by_solicitud(db, solicitud_id)
+    if not evidencias:
+        raise HTTPException(status_code=400, detail="No hay evidencia registrada para confirmar")
+
+    total_eco_creditos = sum(e.eco_creditos for e in evidencias)
+
+    ciudadano = crud_user.sumar_eco_creditos(db, current_user.id, total_eco_creditos)
+    solicitud = crud_solicitud.marcar_estado(db, solicitud, "completada")
+
+    manager.notify_from_thread(
+        solicitud.ciudadano_id,
+        {
+            "tipo": "eco_creditos_acreditados",
+            "solicitud_id": solicitud.id,
+            "eco_creditos": total_eco_creditos,
+            "wallet_total": ciudadano.eco_creditos if ciudadano else total_eco_creditos,
+        },
+    )
+    manager.notify_from_thread(
+        solicitud.reciclador_id,
+        {
+            "tipo": "recoleccion_completada",
+            "solicitud_id": solicitud.id,
+        },
+    )
+
     return solicitud

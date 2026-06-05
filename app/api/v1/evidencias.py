@@ -5,11 +5,12 @@ import uuid
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.v1.dependencies import require_role
+from app.api.v1.dependencies import get_current_user, require_role
 from app.crud import crud_evidencia, crud_solicitud
 from app.db.session import get_db
 from app.models.user import Usuario
 from app.schemas.evidencia import EvidenciaOut
+from app.websockets.manager import manager
 
 router = APIRouter()
 
@@ -47,7 +48,7 @@ def registrar_evidencia(
 
     ext = (foto.filename or "foto").rsplit(".", 1)[-1].lower()
     if ext not in EXTENSIONES_PERMITIDAS:
-        raise HTTPException(status_code=422, detail="Formato de imagen no permitido (jpg, jpeg, png, webp)")
+        raise HTTPException(status_code=422, detail="Formato no permitido (jpg, jpeg, png, webp)")
 
     filename = f"{uuid.uuid4()}.{ext}"
     filepath = os.path.join(UPLOAD_DIR, filename)
@@ -64,4 +65,42 @@ def registrar_evidencia(
         peso_kg=peso_kg,
         tipo_residuo=solicitud.tipo_residuo,
     )
+
+    # Cambiar estado a pendiente_confirmacion y notificar al ciudadano
+    crud_solicitud.marcar_estado(db, solicitud, "pendiente_confirmacion")
+
+    manager.notify_from_thread(
+        solicitud.ciudadano_id,
+        {
+            "tipo": "evidencia_registrada",
+            "solicitud_id": solicitud.id,
+            "eco_creditos": evidencia.eco_creditos,
+            "peso_kg": evidencia.peso_kg,
+            "foto_url": foto_url,
+        },
+    )
+
     return evidencia
+
+
+@router.get(
+    "/{solicitud_id}",
+    response_model=list[EvidenciaOut],
+    summary="Obtener evidencias de una solicitud",
+)
+def obtener_evidencias(
+    solicitud_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(get_current_user),
+):
+    solicitud = crud_solicitud.get_by_id(db, solicitud_id)
+    if not solicitud:
+        raise HTTPException(status_code=404, detail="Solicitud no encontrada")
+    if (
+        current_user.rol != "admin"
+        and solicitud.ciudadano_id != current_user.id
+        and solicitud.reciclador_id != current_user.id
+    ):
+        raise HTTPException(status_code=403, detail="Sin acceso a esta solicitud")
+
+    return crud_evidencia.get_by_solicitud(db, solicitud_id)

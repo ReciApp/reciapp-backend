@@ -81,6 +81,7 @@ class UsuarioOut(BaseModel):
     estado_validacion: str | None = None
     latitud: float | None = None
     longitud: float | None = None
+    eco_creditos: float = 0.0
 
 
 class TokenOut(BaseModel):
