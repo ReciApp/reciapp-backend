@@ -73,6 +73,16 @@ def validar_reciclador(db: Session, usuario_id: int, accion: str) -> Usuario | N
     return usuario
 
 
+def sumar_eco_creditos(db: Session, usuario_id: int, cantidad: float) -> Usuario | None:
+    usuario = get_by_id(db, usuario_id)
+    if not usuario:
+        return None
+    usuario.eco_creditos = round((usuario.eco_creditos or 0.0) + cantidad, 2)
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+
 def update_perfil(db: Session, usuario: Usuario, data: UsuarioUpdate) -> Usuario:
     for field, value in data.model_dump(exclude_none=True).items():
         setattr(usuario, field, value)
