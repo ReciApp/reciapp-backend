@@ -21,7 +21,7 @@ class Solicitud(Base):
     latitud = Column(Float, nullable=True)
     longitud = Column(Float, nullable=True)
 
-    estado = Column(String(20), nullable=False, default="pendiente")
+    estado = Column(String(30), nullable=False, default="pendiente")
     reciclador_id = Column(Integer, ForeignKey("usuarios.id"), nullable=True, index=True)
     fecha_asignacion = Column(DateTime(timezone=True), nullable=True)
 
