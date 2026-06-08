@@ -7,10 +7,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/uploads/evidencias \
-    && useradd -m -u 1001 appuser \
-    && chown -R appuser:appuser /app
-
-USER 1001
+RUN mkdir -p /app/uploads/evidencias /app/app/data \
+    && chgrp -R 0 /app \
+    && chmod -R g=u /app
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
