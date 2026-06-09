@@ -38,12 +38,29 @@ def test_connect_acepta_websocket_y_registra(mgr):
 def test_disconnect_elimina_conexion(mgr):
     ws = AsyncMock()
     asyncio.get_event_loop().run_until_complete(mgr.connect(1, ws))
-    mgr.disconnect(1)
+    mgr.disconnect(1, ws)
     assert not mgr.is_connected(1)
 
 
 def test_disconnect_usuario_inexistente_no_lanza(mgr):
-    mgr.disconnect(999)  # no debe explotar
+    mgr.disconnect(999, AsyncMock())  # no debe explotar
+
+
+def test_disconnect_viejo_no_elimina_conexion_nueva(mgr):
+    """Race al navegar entre páginas: la desconexión del WS viejo no debe
+    sacar del registro al WS nuevo del mismo usuario."""
+    loop = asyncio.get_event_loop()
+    ws_viejo = AsyncMock()
+    ws_nuevo = AsyncMock()
+    loop.run_until_complete(mgr.connect(1, ws_viejo))
+    loop.run_until_complete(mgr.connect(1, ws_nuevo))
+
+    mgr.disconnect(1, ws_viejo)
+
+    assert mgr.is_connected(1)
+    loop.run_until_complete(mgr.send_to_user(1, {"tipo": "ubicacion_reciclador"}))
+    ws_nuevo.send_json.assert_called_once_with({"tipo": "ubicacion_reciclador"})
+    ws_viejo.send_json.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

@@ -20,6 +20,7 @@ _graph: dict[int, list[tuple[int, float]]] = {}      # node_id → [(vecino_id, 
 _grafo_listo = False
 _init_lock = threading.Lock()
 _rutas_activas: dict[int, list[tuple[float, float]]] = {}  # solicitud_id → ruta
+_ubicaciones_activas: dict[int, dict] = {}  # solicitud_id → {lat, lon, eta_min}
 
 
 # ── Geometría ─────────────────────────────────────────────────────────────────
@@ -147,6 +148,17 @@ def _astar(start: int, goal: int) -> list[int]:
 
 # ── API pública ───────────────────────────────────────────────────────────────
 
+def grafo_listo() -> bool:
+    return _grafo_listo
+
+
+def longitud_ruta_km(coords: list[tuple[float, float]]) -> float:
+    return sum(
+        haversine_km(coords[i][0], coords[i][1], coords[i + 1][0], coords[i + 1][1])
+        for i in range(len(coords) - 1)
+    )
+
+
 def calcular_ruta(
     origen_lat: float, origen_lon: float,
     destino_lat: float, destino_lon: float,
@@ -165,11 +177,7 @@ def calcular_ruta(
         return [(origen_lat, origen_lon), (destino_lat, destino_lon)], dist
 
     coords = [_nodes[nid] for nid in path]
-    dist = sum(
-        haversine_km(coords[i][0], coords[i][1], coords[i + 1][0], coords[i + 1][1])
-        for i in range(len(coords) - 1)
-    )
-    return coords, dist
+    return coords, longitud_ruta_km(coords)
 
 
 def calcular_desvio_metros(lat: float, lon: float, ruta: list[tuple[float, float]]) -> float:
@@ -206,3 +214,16 @@ def guardar_ruta_activa(solicitud_id: int, ruta: list[tuple[float, float]]) -> N
 
 def limpiar_ruta_activa(solicitud_id: int) -> None:
     _rutas_activas.pop(solicitud_id, None)
+    _ubicaciones_activas.pop(solicitud_id, None)
+
+
+def guardar_ubicacion_activa(
+    solicitud_id: int, lat: float, lon: float, eta_min: int | None,
+) -> None:
+    """Última posición conocida del reciclador, para reenviarla al ciudadano
+    que abre la página de seguimiento después del último update GPS."""
+    _ubicaciones_activas[solicitud_id] = {"lat": lat, "lon": lon, "eta_min": eta_min}
+
+
+def obtener_ubicacion_activa(solicitud_id: int) -> dict | None:
+    return _ubicaciones_activas.get(solicitud_id)
