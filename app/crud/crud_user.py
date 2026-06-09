@@ -16,6 +16,14 @@ def get_by_dni(db: Session, dni: str) -> Usuario | None:
     return db.query(Usuario).filter(Usuario.dni == dni).first()
 
 
+def get_recicladores_activos(db: Session) -> list[Usuario]:
+    return (
+        db.query(Usuario)
+        .filter(Usuario.rol == "reciclador", Usuario.estado_validacion == "aprobado", Usuario.activo == True)  # noqa: E712
+        .all()
+    )
+
+
 def get_recicladores_pendientes(db: Session) -> list[Usuario]:
     return (
         db.query(Usuario)

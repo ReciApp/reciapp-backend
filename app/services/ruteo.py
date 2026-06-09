@@ -36,6 +36,12 @@ def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 # ── Carga del grafo OSM ───────────────────────────────────────────────────────
 
+_OVERPASS_MIRRORS = [
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass-api.de/api/interpreter",
+]
+
+
 def _descargar_osm() -> dict:
     query = (
         "[out:json][timeout:90];\n(\n"
@@ -44,14 +50,21 @@ def _descargar_osm() -> dict:
         "motorway_link|trunk_link|primary_link|secondary_link|tertiary_link)$\"]\n"
         f"  ({_BBOX});\n);\nout body;\n>;\nout skel qt;\n"
     )
-    url = "https://overpass-api.de/api/interpreter"
     data = urllib.parse.urlencode({"data": query}).encode()
-    req = urllib.request.Request(
-        url, data=data,
-        headers={"User-Agent": "ReciApp/2.0 (academic project; ruteo Puente Piedra Lima)"},
-    )
-    with urllib.request.urlopen(req, timeout=90) as resp:
-        return json.loads(resp.read().decode())
+
+    ultimo_error: Exception | None = None
+    for url in _OVERPASS_MIRRORS:
+        req = urllib.request.Request(
+            url, data=data,
+            headers={"User-Agent": "ReciApp/2.0 (academic project; ruteo Puente Piedra Lima)"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                return json.loads(resp.read().decode())
+        except Exception as exc:
+            print(f"Ruteo: mirror {url} falló ({exc}), probando el siguiente…")
+            ultimo_error = exc
+    raise ultimo_error
 
 
 def _construir_grafo(osm: dict) -> tuple[dict, dict]:

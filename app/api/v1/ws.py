@@ -63,7 +63,7 @@ async def _handle_ubicacion_reciclador(
             eta_min = None
 
         await manager.send_to_user(solicitud.ciudadano_id, {
-            "tipo": "posicion_reciclador",
+            "tipo": "ubicacion_reciclador",
             "solicitud_id": solicitud_id,
             "lat": lat,
             "lon": lon,

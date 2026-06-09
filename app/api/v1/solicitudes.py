@@ -6,7 +6,7 @@ from app.crud import crud_evidencia, crud_solicitud, crud_user
 from app.db.session import get_db
 from app.models.user import Usuario
 from app.schemas.solicitud import SolicitudCreate, SolicitudOut
-from app.services.asignacion import trigger_asignacion
+from app.services.asignacion import programar_asignacion_fallback, trigger_asignacion
 from app.websockets.manager import manager
 
 router = APIRouter()
@@ -20,12 +20,27 @@ router = APIRouter()
 )
 def crear_solicitud(
     data: SolicitudCreate,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(require_role("ciudadano")),
 ):
     solicitud = crud_solicitud.create(db, data, current_user.id)
-    background_tasks.add_task(trigger_asignacion, solicitud.id)
+
+    # Queda visible para que cualquier reciclador la tome; si nadie lo hace,
+    # programar_asignacion_fallback la asignará automáticamente más tarde.
+    for r in crud_user.get_recicladores_activos(db):
+        manager.notify_from_thread(r.id, {
+            "tipo": "solicitud_disponible",
+            "solicitud_id": solicitud.id,
+            "ciudadano_id": solicitud.ciudadano_id,
+            "tipo_residuo": solicitud.tipo_residuo,
+            "cantidad_kg": solicitud.cantidad_kg,
+            "direccion": solicitud.direccion,
+            "fecha_recoleccion": solicitud.fecha_recoleccion,
+            "franja_horaria": solicitud.franja_horaria,
+            "latitud": solicitud.latitud,
+            "longitud": solicitud.longitud,
+        })
+    programar_asignacion_fallback(solicitud.id)
     return solicitud
 
 
@@ -41,6 +56,50 @@ def listar_solicitudes(
     if current_user.rol == "reciclador":
         return crud_solicitud.get_by_reciclador(db, current_user.id)
     return crud_solicitud.get_by_ciudadano(db, current_user.id)
+
+
+@router.get(
+    "/disponibles",
+    response_model=list[SolicitudOut],
+    summary="Listar solicitudes pendientes que cualquier reciclador puede tomar",
+)
+def listar_disponibles(
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role("reciclador")),
+):
+    return crud_solicitud.get_pendientes(db)
+
+
+@router.put(
+    "/{solicitud_id}/tomar",
+    response_model=SolicitudOut,
+    summary="Reciclador toma una solicitud disponible (queda en camino de inmediato)",
+)
+def tomar_solicitud(
+    solicitud_id: int,
+    db: Session = Depends(get_db),
+    current_user: Usuario = Depends(require_role("reciclador")),
+):
+    solicitud = crud_solicitud.tomar(db, solicitud_id, current_user.id)
+    if not solicitud:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="La solicitud ya no está disponible — alguien más la tomó primero",
+        )
+
+    for r in crud_user.get_recicladores_activos(db):
+        if r.id != current_user.id:
+            manager.notify_from_thread(r.id, {"tipo": "solicitud_no_disponible", "solicitud_id": solicitud.id})
+
+    manager.notify_from_thread(
+        solicitud.ciudadano_id,
+        {
+            "tipo": "solicitud_en_camino",
+            "solicitud_id": solicitud.id,
+            "reciclador_id": solicitud.reciclador_id,
+        },
+    )
+    return solicitud
 
 
 @router.get(

@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from sqlalchemy import update as sa_update
 from sqlalchemy.orm import Session
 from app.models.solicitud import Solicitud
 from app.schemas.solicitud import SolicitudCreate
@@ -26,6 +27,37 @@ def create(db: Session, data: SolicitudCreate, ciudadano_id: int) -> Solicitud:
 
 def get_by_id(db: Session, solicitud_id: int) -> Solicitud | None:
     return db.query(Solicitud).filter(Solicitud.id == solicitud_id).first()
+
+
+def get_pendientes(db: Session) -> list[Solicitud]:
+    return (
+        db.query(Solicitud)
+        .filter(Solicitud.estado == "pendiente")
+        .order_by(Solicitud.fecha_creacion.desc())
+        .all()
+    )
+
+
+def tomar(db: Session, solicitud_id: int, reciclador_id: int) -> Solicitud | None:
+    """Reclama atómicamente una solicitud pendiente para el reciclador.
+
+    Usa un UPDATE condicionado a estado='pendiente' para que, si dos
+    recicladores la toman a la vez, solo uno gane la condición de carrera.
+    Devuelve None si la solicitud ya no estaba disponible.
+    """
+    resultado = db.execute(
+        sa_update(Solicitud)
+        .where(Solicitud.id == solicitud_id, Solicitud.estado == "pendiente")
+        .values(
+            estado="en_camino",
+            reciclador_id=reciclador_id,
+            fecha_asignacion=datetime.now(timezone.utc),
+        )
+    )
+    db.commit()
+    if resultado.rowcount == 0:
+        return None
+    return get_by_id(db, solicitud_id)
 
 
 def get_by_ciudadano(db: Session, ciudadano_id: int) -> list[Solicitud]:

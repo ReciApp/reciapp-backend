@@ -9,7 +9,8 @@ class TipoResiduo(str, Enum):
     vidrio = "vidrio"
     metal = "metal"
     organico = "organico"
-    electronico = "electronico"
+    electronicos = "electronicos"
+    carton = "carton"
 
 
 class FranjaHoraria(str, Enum):
