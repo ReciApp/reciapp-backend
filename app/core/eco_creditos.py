@@ -4,7 +4,8 @@ ECO_CREDITOS_POR_KG: dict[str, float] = {
     "vidrio": 8.0,
     "metal": 15.0,
     "organico": 3.0,
-    "electronico": 20.0,
+    "electronicos": 20.0,
+    "carton": 5.0,
 }
 
 

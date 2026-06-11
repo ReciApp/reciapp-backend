@@ -24,3 +24,4 @@ class Usuario(Base):
     estado_validacion = Column(String(20), nullable=True)
     latitud = Column(Float, nullable=True)
     longitud = Column(Float, nullable=True)
+    eco_creditos = Column(Float, nullable=False, default=0.0)

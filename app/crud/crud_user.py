@@ -16,6 +16,14 @@ def get_by_dni(db: Session, dni: str) -> Usuario | None:
     return db.query(Usuario).filter(Usuario.dni == dni).first()
 
 
+def get_recicladores_activos(db: Session) -> list[Usuario]:
+    return (
+        db.query(Usuario)
+        .filter(Usuario.rol == "reciclador", Usuario.estado_validacion == "aprobado", Usuario.activo == True)  # noqa: E712
+        .all()
+    )
+
+
 def get_recicladores_pendientes(db: Session) -> list[Usuario]:
     return (
         db.query(Usuario)
@@ -68,6 +76,16 @@ def validar_reciclador(db: Session, usuario_id: int, accion: str) -> Usuario | N
         return None
     usuario.estado_validacion = accion
     usuario.activo = accion == "aprobado"
+    db.commit()
+    db.refresh(usuario)
+    return usuario
+
+
+def sumar_eco_creditos(db: Session, usuario_id: int, cantidad: float) -> Usuario | None:
+    usuario = get_by_id(db, usuario_id)
+    if not usuario:
+        return None
+    usuario.eco_creditos = round((usuario.eco_creditos or 0.0) + cantidad, 2)
     db.commit()
     db.refresh(usuario)
     return usuario

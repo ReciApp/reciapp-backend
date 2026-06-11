@@ -9,7 +9,8 @@ class TipoResiduo(str, Enum):
     vidrio = "vidrio"
     metal = "metal"
     organico = "organico"
-    electronico = "electronico"
+    electronicos = "electronicos"
+    carton = "carton"
 
 
 class FranjaHoraria(str, Enum):
@@ -22,6 +23,7 @@ class EstadoSolicitud(str, Enum):
     pendiente = "pendiente"
     asignada = "asignada"
     en_camino = "en_camino"
+    pendiente_confirmacion = "pendiente_confirmacion"
     completada = "completada"
     cancelada = "cancelada"
 

@@ -9,3 +9,5 @@ venv/
 *.log
 dist/
 build/
+app/data/osm_cache.json
+uploads/

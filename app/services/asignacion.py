@@ -5,11 +5,24 @@ from app.db.session import SessionLocal
 MAX_INTENTOS = 3
 INTERVALO_REINTENTO_SEG = 900   # 15 minutos entre reintentos de asignación inicial
 TIMEOUT_RESPUESTA_SEG = 600     # 10 minutos para que el reciclador acepte o rechace
+VENTANA_RECLAMO_SEG = 600       # 10 minutos para que algún reciclador la tome manualmente
+                                # antes de recurrir a la asignación automática de respaldo
+
+
+def programar_asignacion_fallback(solicitud_id: int) -> None:
+    """Da tiempo a que un reciclador reclame la solicitud manualmente desde
+    el listado de disponibles; si nadie lo hace en VENTANA_RECLAMO_SEG, se
+    dispara la asignación automática al más cercano como respaldo."""
+    t = threading.Timer(VENTANA_RECLAMO_SEG, trigger_asignacion, args=(solicitud_id,))
+    t.daemon = True
+    t.start()
 
 
 def _notificar_asignacion(solicitud_id: int) -> None:
-    """Emite notificaciones WebSocket a reciclador y ciudadano tras asignación."""
-    from app.crud import crud_solicitud
+    """Emite notificaciones WebSocket a reciclador, ciudadano y al resto de
+    recicladores (para que la solicitud desaparezca de su listado de
+    disponibles, ya que la asignación automática de respaldo se la quitó)."""
+    from app.crud import crud_solicitud, crud_user
     from app.websockets.manager import manager
 
     db = SessionLocal()
@@ -17,6 +30,12 @@ def _notificar_asignacion(solicitud_id: int) -> None:
         solicitud = crud_solicitud.get_by_id(db, solicitud_id)
         if not solicitud:
             return
+
+        for r in crud_user.get_recicladores_activos(db):
+            if r.id != solicitud.reciclador_id:
+                manager.notify_from_thread(
+                    r.id, {"tipo": "solicitud_no_disponible", "solicitud_id": solicitud.id}
+                )
 
         manager.notify_from_thread(
             solicitud.reciclador_id,

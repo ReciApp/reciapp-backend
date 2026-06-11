@@ -1,4 +1,5 @@
 import asyncio
+import threading
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,6 +9,8 @@ from app.db.session import engine
 from app.models.base import Base
 import app.models  # noqa: F401 — registra todos los modelos en Base.metadata
 from app.api.v1 import auth, users, solicitudes, evidencias, ws
+from app.api.v1 import ruteo as ruteo_api
+from app.services.ruteo import _init_grafo as _init_ruteo
 from app.websockets.manager import manager
 
 app = FastAPI(
@@ -28,12 +31,14 @@ app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(users.router, prefix="/api/usuarios", tags=["Usuarios"])
 app.include_router(solicitudes.router, prefix="/api/solicitudes", tags=["Solicitudes"])
 app.include_router(evidencias.router, prefix="/api/evidencias", tags=["Evidencias"])
+app.include_router(ruteo_api.router, prefix="/api/ruteo", tags=["Ruteo"])
 app.include_router(ws.router, tags=["WebSocket"])
 
 
 @app.on_event("startup")
 async def startup():
     manager.set_loop(asyncio.get_event_loop())
+    threading.Thread(target=_init_ruteo, daemon=True).start()
     max_retries = 20
     for attempt in range(max_retries):
         try:
