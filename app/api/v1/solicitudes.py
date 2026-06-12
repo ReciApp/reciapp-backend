@@ -147,7 +147,7 @@ def aceptar_solicitud(
             detail=f"La solicitud está en estado '{solicitud.estado}', no puede aceptarse",
         )
 
-    solicitud = crud_solicitud.marcar_estado(db, solicitud, "en_camino")
+    solicitud = crud_solicitud.marcar_estado(db, solicitud, "en_camino", actor_id=current_user.id)
 
     manager.notify_from_thread(
         solicitud.ciudadano_id,
@@ -183,7 +183,7 @@ def rechazar_solicitud(
         )
 
     reciclador_rechazado_id = current_user.id
-    solicitud = crud_solicitud.resetear_asignacion(db, solicitud)
+    solicitud = crud_solicitud.resetear_asignacion(db, solicitud, actor_id=current_user.id)
 
     manager.notify_from_thread(
         solicitud.ciudadano_id,
@@ -225,7 +225,7 @@ def confirmar_recoleccion(
     total_eco_creditos = sum(e.eco_creditos for e in evidencias)
 
     ciudadano = crud_user.sumar_eco_creditos(db, current_user.id, total_eco_creditos)
-    solicitud = crud_solicitud.marcar_estado(db, solicitud, "completada")
+    solicitud = crud_solicitud.marcar_estado(db, solicitud, "completada", actor_id=current_user.id)
 
     manager.notify_from_thread(
         solicitud.ciudadano_id,

@@ -67,7 +67,7 @@ def registrar_evidencia(
     )
 
     # Cambiar estado a pendiente_confirmacion y notificar al ciudadano
-    crud_solicitud.marcar_estado(db, solicitud, "pendiente_confirmacion")
+    crud_solicitud.marcar_estado(db, solicitud, "pendiente_confirmacion", actor_id=current_user.id)
 
     manager.notify_from_thread(
         solicitud.ciudadano_id,

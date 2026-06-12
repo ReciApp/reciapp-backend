@@ -78,3 +78,18 @@ class SolicitudOut(BaseModel):
     fecha_asignacion: datetime | None
     fecha_creacion: datetime | None
     fecha_actualizacion: datetime | None
+
+
+class HistorialOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    solicitud_id: int
+    usuario_id: int | None
+    estado_anterior: str | None
+    estado_nuevo: str
+    fecha: datetime | None
+
+
+class SolicitudConHistorialOut(SolicitudOut):
+    historial: list[HistorialOut] = []
