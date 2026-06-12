@@ -25,3 +25,5 @@ class Usuario(Base):
     latitud = Column(Float, nullable=True)
     longitud = Column(Float, nullable=True)
     eco_creditos = Column(Float, nullable=False, default=0.0)
+    calificacion_promedio = Column(Float, nullable=True)
+    total_calificaciones = Column(Integer, nullable=False, default=0)

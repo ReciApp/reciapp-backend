@@ -82,6 +82,8 @@ class UsuarioOut(BaseModel):
     latitud: float | None = None
     longitud: float | None = None
     eco_creditos: float = 0.0
+    calificacion_promedio: float | None = None
+    total_calificaciones: int = 0
 
 
 class TokenOut(BaseModel):
@@ -98,3 +100,5 @@ class UsuarioPublico(BaseModel):
     celular: str | None = None
     zona_cobertura: str | None = None
     disponibilidad_horaria: str | None = None
+    calificacion_promedio: float | None = None
+    total_calificaciones: int = 0
