@@ -8,7 +8,7 @@ from app.core.config import FRONTEND_URL
 from app.db.session import engine
 from app.models.base import Base
 import app.models  # noqa: F401 — registra todos los modelos en Base.metadata
-from app.api.v1 import auth, users, solicitudes, evidencias, ws
+from app.api.v1 import auth, users, solicitudes, evidencias, rutas, ws
 from app.api.v1 import ruteo as ruteo_api
 from app.services.ruteo import _init_grafo as _init_ruteo
 from app.websockets.manager import manager
@@ -32,6 +32,7 @@ app.include_router(users.router, prefix="/api/usuarios", tags=["Usuarios"])
 app.include_router(solicitudes.router, prefix="/api/solicitudes", tags=["Solicitudes"])
 app.include_router(evidencias.router, prefix="/api/evidencias", tags=["Evidencias"])
 app.include_router(ruteo_api.router, prefix="/api/ruteo", tags=["Ruteo"])
+app.include_router(rutas.router, prefix="/api/rutas", tags=["Rutas"])
 app.include_router(ws.router, tags=["WebSocket"])
 
 

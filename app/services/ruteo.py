@@ -180,6 +180,81 @@ def calcular_ruta(
     return coords, longitud_ruta_km(coords)
 
 
+# ── Ruta óptima con múltiples puntos (RECI-75) ───────────────────────────────
+
+def _matriz_distancias(
+    puntos: list[tuple[float, float]],
+) -> tuple[list[list[float]], dict[tuple[int, int], list[tuple[float, float]]]]:
+    """Matriz de costos entre todos los pares de puntos usando A* como función
+    de costo. El grafo es no dirigido, así que solo se calcula medio triángulo."""
+    n = len(puntos)
+    dist = [[0.0] * n for _ in range(n)]
+    rutas: dict[tuple[int, int], list[tuple[float, float]]] = {}
+    for i in range(n):
+        for j in range(i + 1, n):
+            coords, d = calcular_ruta(puntos[i][0], puntos[i][1], puntos[j][0], puntos[j][1])
+            dist[i][j] = dist[j][i] = d
+            rutas[(i, j)] = coords
+            rutas[(j, i)] = list(reversed(coords))
+    return dist, rutas
+
+
+def _costo_camino(orden: list[int], dist: list[list[float]]) -> float:
+    return sum(dist[orden[i]][orden[i + 1]] for i in range(len(orden) - 1))
+
+
+def _vecino_mas_cercano(dist: list[list[float]]) -> list[int]:
+    """Orden inicial de visita: desde el origen (índice 0) saltar siempre
+    al punto pendiente más cercano."""
+    orden = [0]
+    pendientes = set(range(1, len(dist)))
+    while pendientes:
+        actual = orden[-1]
+        siguiente = min(pendientes, key=lambda j: dist[actual][j])
+        orden.append(siguiente)
+        pendientes.remove(siguiente)
+    return orden
+
+
+def _mejora_2opt(orden: list[int], dist: list[list[float]]) -> list[int]:
+    """Mejora 2-opt sobre camino abierto: invierte segmentos mientras reduzcan
+    el costo total. El origen (posición 0) queda fijo."""
+    mejor = orden[:]
+    costo_mejor = _costo_camino(mejor, dist)
+    mejorado = True
+    while mejorado:
+        mejorado = False
+        for i in range(1, len(mejor) - 1):
+            for k in range(i + 1, len(mejor)):
+                candidato = mejor[:i] + mejor[i:k + 1][::-1] + mejor[k + 1:]
+                costo = _costo_camino(candidato, dist)
+                if costo < costo_mejor - 1e-9:
+                    mejor, costo_mejor = candidato, costo
+                    mejorado = True
+    return mejor
+
+
+def optimizar_multipunto(
+    origen: tuple[float, float],
+    paradas: list[tuple[float, float]],
+) -> tuple[list[int], list[dict]]:
+    """Ordena N paradas desde el origen minimizando la distancia total.
+
+    Devuelve (orden, tramos): `orden` son los índices de `paradas` en orden de
+    visita y `tramos[i]` es el trayecto hasta la parada i del orden, con
+    `coords` (polilínea A*) y `distancia_km`.
+    """
+    puntos = [origen] + paradas
+    dist, rutas = _matriz_distancias(puntos)
+    orden_global = _mejora_2opt(_vecino_mas_cercano(dist), dist)
+
+    tramos = [
+        {"coords": rutas[(a, b)], "distancia_km": dist[a][b]}
+        for a, b in zip(orden_global, orden_global[1:])
+    ]
+    return [idx - 1 for idx in orden_global[1:]], tramos
+
+
 def calcular_desvio_metros(lat: float, lon: float, ruta: list[tuple[float, float]]) -> float:
     """Distancia en metros desde (lat,lon) al punto más cercano de la ruta."""
     if len(ruta) < 2:
