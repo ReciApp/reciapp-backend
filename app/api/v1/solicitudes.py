@@ -141,7 +141,7 @@ def aceptar_solicitud(
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
     if solicitud.reciclador_id != current_user.id:
         raise HTTPException(status_code=403, detail="No eres el reciclador asignado a esta solicitud")
-    if solicitud.estado != "asignada":
+    if solicitud.estado not in ("asignada", "confirmada"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"La solicitud está en estado '{solicitud.estado}', no puede aceptarse",
@@ -176,7 +176,7 @@ def rechazar_solicitud(
         raise HTTPException(status_code=404, detail="Solicitud no encontrada")
     if solicitud.reciclador_id != current_user.id:
         raise HTTPException(status_code=403, detail="No eres el reciclador asignado a esta solicitud")
-    if solicitud.estado != "asignada":
+    if solicitud.estado not in ("asignada", "confirmada"):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"La solicitud está en estado '{solicitud.estado}', no puede rechazarse",

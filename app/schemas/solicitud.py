@@ -22,6 +22,7 @@ class FranjaHoraria(str, Enum):
 class EstadoSolicitud(str, Enum):
     pendiente = "pendiente"
     asignada = "asignada"
+    confirmada = "confirmada"
     en_camino = "en_camino"
     pendiente_confirmacion = "pendiente_confirmacion"
     completada = "completada"

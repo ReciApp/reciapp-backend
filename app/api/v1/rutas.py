@@ -10,7 +10,7 @@ from app.services import ruteo
 
 router = APIRouter()
 
-ESTADOS_OPTIMIZABLES = ("asignada", "en_camino")
+ESTADOS_OPTIMIZABLES = ("asignada", "confirmada", "en_camino")
 
 
 class OptimizarRequest(BaseModel):
