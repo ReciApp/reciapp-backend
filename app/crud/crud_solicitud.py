@@ -99,6 +99,21 @@ def get_by_reciclador_filtrado(
     return query.order_by(Solicitud.fecha_creacion.desc()).all()
 
 
+def get_dia_siguiente(db: Session, reciclador_id: int, fecha: str) -> list[Solicitud]:
+    """Solicitudes del reciclador planificables para el día siguiente:
+    las asignadas (por confirmar) y las ya confirmadas para esa fecha."""
+    return (
+        db.query(Solicitud)
+        .filter(
+            Solicitud.reciclador_id == reciclador_id,
+            Solicitud.fecha_recoleccion == fecha,
+            Solicitud.estado.in_(("asignada", "confirmada")),
+        )
+        .order_by(Solicitud.franja_horaria.asc(), Solicitud.fecha_creacion.asc())
+        .all()
+    )
+
+
 def asignar(db: Session, solicitud: Solicitud, reciclador_id: int) -> Solicitud:
     estado_anterior = solicitud.estado
     solicitud.reciclador_id = reciclador_id
