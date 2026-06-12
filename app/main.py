@@ -8,8 +8,8 @@ from app.core.config import FRONTEND_URL
 from app.db.session import engine
 from app.models.base import Base
 import app.models  # noqa: F401 — registra todos los modelos en Base.metadata
-from app.api.v1 import (auth, calificaciones, evidencias, reciclador, rewards,
-                        rutas, solicitudes, users, wallets, ws)
+from app.api.v1 import (auth, calificaciones, evidencias, historial, reciclador,
+                        rewards, rutas, solicitudes, users, wallets, ws)
 from app.api.v1 import ruteo as ruteo_api
 from app.services.ruteo import _init_grafo as _init_ruteo
 from app.websockets.manager import manager
@@ -35,6 +35,7 @@ app.include_router(evidencias.router, prefix="/api/evidencias", tags=["Evidencia
 app.include_router(ruteo_api.router, prefix="/api/ruteo", tags=["Ruteo"])
 app.include_router(rutas.router, prefix="/api/rutas", tags=["Rutas"])
 app.include_router(reciclador.router, prefix="/api/reciclador", tags=["Reciclador"])
+app.include_router(historial.router, prefix="/api/historial", tags=["Historial"])
 app.include_router(rewards.router_admin, prefix="/admin/rewards", tags=["Rewards (admin)"])
 app.include_router(rewards.router_catalogo, prefix="/api/rewards", tags=["Rewards"])
 app.include_router(wallets.router, prefix="/api/wallets", tags=["Wallet"])
