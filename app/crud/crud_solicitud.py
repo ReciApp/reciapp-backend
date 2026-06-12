@@ -99,6 +99,38 @@ def get_by_reciclador_filtrado(
     return query.order_by(Solicitud.fecha_creacion.desc()).all()
 
 
+def get_historial_filtrado(
+    db: Session,
+    ciudadano_id: int | None = None,
+    reciclador_id: int | None = None,
+    estado: str | None = None,
+    tipo_residuo: str | None = None,
+    desde: str | None = None,
+    hasta: str | None = None,
+) -> list[Solicitud]:
+    """Historial de solicitudes (solo lectura) con filtros opcionales.
+
+    ciudadano_id/reciclador_id acotan al dueño; si ambos son None se
+    devuelven todas (uso de admin). desde/hasta filtran por
+    fecha_recoleccion (YYYY-MM-DD, inclusivo)."""
+    query = db.query(Solicitud)
+    if ciudadano_id is not None:
+        query = query.filter(Solicitud.ciudadano_id == ciudadano_id)
+    if reciclador_id is not None:
+        query = query.filter(Solicitud.reciclador_id == reciclador_id)
+    if estado:
+        query = query.filter(Solicitud.estado == estado)
+    if tipo_residuo:
+        query = query.filter(Solicitud.tipo_residuo == tipo_residuo)
+    if desde:
+        query = query.filter(Solicitud.fecha_recoleccion >= desde)
+    if hasta:
+        query = query.filter(Solicitud.fecha_recoleccion <= hasta)
+    return query.order_by(
+        Solicitud.fecha_recoleccion.desc(), Solicitud.fecha_creacion.desc(),
+    ).all()
+
+
 def get_dia_siguiente(db: Session, reciclador_id: int, fecha: str) -> list[Solicitud]:
     """Solicitudes del reciclador planificables para el día siguiente:
     las asignadas (por confirmar) y las ya confirmadas para esa fecha."""
