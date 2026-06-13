@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.api.v1.dependencies import require_role
 from app.db.session import get_db
 from app.models.user import Usuario
-from app.schemas.analytics import ResumenAnalytics
+from app.schemas.analytics import PuntoHeatmap, ResumenAnalytics
 from app.services import analytics
 
 router = APIRouter()
@@ -34,3 +34,16 @@ def resumen_analytics(
     _: Usuario = Depends(require_role("admin")),
 ):
     return analytics.resumen(db, filtros)
+
+
+@router.get(
+    "/heatmap",
+    response_model=list[PuntoHeatmap],
+    summary="Puntos georreferenciados de recolecciones para el mapa de calor (solo admin)",
+)
+def heatmap_analytics(
+    filtros: analytics.Filtros = Depends(filtros_analytics),
+    db: Session = Depends(get_db),
+    _: Usuario = Depends(require_role("admin")),
+):
+    return analytics.heatmap_puntos(db, filtros)
